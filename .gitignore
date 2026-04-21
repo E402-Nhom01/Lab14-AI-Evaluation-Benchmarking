@@ -8,3 +8,5 @@ data/golden_set.jsonl
 venv/
 
 .venv/
+
+agent/__MACOSX/
