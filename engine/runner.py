@@ -47,7 +47,7 @@ class BenchmarkRunner:
             logging.error(f"Lỗi khi chạy test case: {e}")
             return {"error": str(e)}
 
-
+    # Chạy song song với batch_size để tránh Rate Limit
     async def run_all(self, dataset: List[Dict], batch_size: int = 5) -> List[Dict]:
         """
         Chạy song song bằng asyncio.gather với giới hạn batch_size để không bị Rate Limit.
