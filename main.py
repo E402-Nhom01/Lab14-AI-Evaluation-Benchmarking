@@ -4,23 +4,35 @@ import os
 import time
 from engine.runner import BenchmarkRunner
 from agent.main_agent import MainAgent
+from engine.retrieval_eval import RetrievalEvaluator
+from engine.llm_judge import LLMJudge
 
 # Giả lập các components Expert
 class ExpertEvaluator:
-    async def score(self, case, resp): 
-        # Giả lập tính toán Hit Rate và MRR
-        return {
-            "faithfulness": 0.9, 
-            "relevancy": 0.8,
-            "retrieval": {"hit_rate": 1.0, "mrr": 0.5}
-        }
+    def __init__(self):
+        self.retrieval_evaluator = RetrievalEvaluator()
 
-class MultiModelJudge:
-    async def evaluate_multi_judge(self, q, a, gt): 
+    async def score(self, case, resp): 
+        expected_ids = case.get("expected_retrieval_ids", [])
+        retrieved_ids = resp.get("metadata", {}).get("sources", [])
+        top_k = case.get("top_k", 3)
+
+        hit_rate = self.retrieval_evaluator.calculate_hit_rate(
+            expected_ids=expected_ids,
+            retrieved_ids=retrieved_ids,
+            top_k=top_k
+        )
+        mrr = self.retrieval_evaluator.calculate_mrr(
+            expected_ids=expected_ids,
+            retrieved_ids=retrieved_ids
+        )
+
         return {
-            "final_score": 4.5, 
-            "agreement_rate": 0.8,
-            "reasoning": "Cả 2 model đồng ý đây là câu trả lời tốt."
+            "retrieval": {
+                "hit_rate": hit_rate,
+                "mrr": mrr,
+                "top_k": top_k
+            }
         }
 
 async def run_benchmark_with_results(agent_version: str):
@@ -37,7 +49,7 @@ async def run_benchmark_with_results(agent_version: str):
         print("❌ File data/golden_set.jsonl rỗng. Hãy tạo ít nhất 1 test case.")
         return None, None
 
-    runner = BenchmarkRunner(MainAgent(), ExpertEvaluator(), MultiModelJudge())
+    runner = BenchmarkRunner(MainAgent(), ExpertEvaluator(), LLMJudge())
     results = await runner.run_all(dataset)
 
     total = len(results)
@@ -46,7 +58,10 @@ async def run_benchmark_with_results(agent_version: str):
         "metrics": {
             "avg_score": sum(r["judge"]["final_score"] for r in results) / total,
             "hit_rate": sum(r["ragas"]["retrieval"]["hit_rate"] for r in results) / total,
-            "agreement_rate": sum(r["judge"]["agreement_rate"] for r in results) / total
+            "mrr": sum(r["ragas"]["retrieval"]["mrr"] for r in results) / total,
+            "agreement_rate": sum(r["judge"]["agreement_rate"] for r in results) / total,
+            "faithfulness": sum(r["judge"]["faithfulness"] for r in results) / total,
+            "relevancy": sum(r["judge"]["relevancy"] for r in results) / total
         }
     }
     return results, summary
