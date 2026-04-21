@@ -2,7 +2,7 @@ import asyncio
 from typing import Dict, Any
 
 class LLMJudge:
-    def __init__(self, model: str = "gpt-4o"):
+    def __init__(self, model: str = "gpt-4o-mini"):
         self.model = model
         # TODO: Định nghĩa rubrics chi tiết cho các tiêu chí: Accuracy, Professionalism, Safety
         self.rubrics = {
@@ -25,7 +25,7 @@ class LLMJudge:
         return {
             "final_score": avg_score,
             "agreement_rate": agreement,
-            "individual_scores": {"gpt-4o": score_a, "claude-3-5": score_b}
+            "individual_scores": {"gpt-4o-mini": score_a, "claude-3-5": score_b}
         }
 
     async def check_position_bias(self, response_a: str, response_b: str):
